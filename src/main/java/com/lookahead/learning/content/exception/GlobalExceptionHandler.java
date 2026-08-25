@@ -1,4 +1,4 @@
-package com.interview.guide.java.backend.exception;
+package com.lookahead.learning.content.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;

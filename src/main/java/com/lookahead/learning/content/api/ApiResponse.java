@@ -1,4 +1,4 @@
-package com.interview.guide.java.backend.api;
+package com.lookahead.learning.content.api;
 
 import java.time.Instant;
 

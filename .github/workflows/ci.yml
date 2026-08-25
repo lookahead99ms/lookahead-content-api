@@ -1,4 +1,4 @@
-name: Backend CI
+name: Content API CI
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: backend-ci-${{ github.ref }}
+  group: content-api-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,4 +34,4 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
 
       - name: Build Docker image
-        run: docker build --tag interview-guide-api:${{ github.sha }} .
+        run: docker build --tag lookahead-content-api:${{ github.sha }} .

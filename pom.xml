@@ -11,11 +11,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.interview.guide.java</groupId>
-    <artifactId>backend</artifactId>
+    <groupId>com.lookahead.learning</groupId>
+    <artifactId>lookahead-content-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>interview-guide-backend</name>
-    <description>REST API for the Java Interview Guide platform</description>
+    <name>lookahead-content-api</name>
+    <description>Learning content API for the Look Ahead Learning Platform</description>
 
     <properties>
         <java.version>21</java.version>
@@ -48,7 +48,7 @@
     </dependencies>
 
     <build>
-        <finalName>java-interview-guide-api</finalName>
+        <finalName>lookahead-content-api</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

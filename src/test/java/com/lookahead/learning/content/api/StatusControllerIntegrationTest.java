@@ -1,4 +1,4 @@
-package com.interview.guide.java.backend.api;
+package com.lookahead.learning.content.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +28,6 @@ class StatusControllerIntegrationTest {
                 .send(request, HttpResponse.BodyHandlers.ofString());
 
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("interview-guide-backend", "UP");
+        assertThat(response.body()).contains("lookahead-content-api", "UP");
     }
 }

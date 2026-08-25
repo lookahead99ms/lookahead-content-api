@@ -1,4 +1,4 @@
-package com.interview.guide.java.backend.config;
+package com.lookahead.learning.content.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    OpenAPI interviewGuideOpenApi() {
+    OpenAPI lookAheadContentOpenApi() {
         return new OpenAPI().info(new Info()
-                .title("Java Interview Guide API")
-                .description("Backend services for the Java Interview Guide platform")
+                .title("Look Ahead Content API")
+                .description("Learning content services for the Look Ahead Learning Platform")
                 .version("v1"));
     }
 }
