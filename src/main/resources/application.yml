@@ -1,6 +1,6 @@
 spring:
   application:
-    name: interview-guide-backend
+    name: lookahead-content-api
   profiles:
     default: local
 

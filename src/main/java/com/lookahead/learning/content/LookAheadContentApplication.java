@@ -1,12 +1,12 @@
-package com.interview.guide.java.backend;
+package com.lookahead.learning.content;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class InterviewGuideApplication {
+public class LookAheadContentApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(InterviewGuideApplication.class, args);
+        SpringApplication.run(LookAheadContentApplication.class, args);
     }
 }

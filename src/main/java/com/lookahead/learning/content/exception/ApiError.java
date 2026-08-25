@@ -1,4 +1,4 @@
-package com.interview.guide.java.backend.exception;
+package com.lookahead.learning.content.exception;
 
 import java.time.Instant;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.interview.guide.java.backend.config;
+package com.lookahead.learning.content.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;

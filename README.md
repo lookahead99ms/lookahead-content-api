@@ -1,6 +1,6 @@
-# Interview Guide API
+# Look Ahead Content API
 
-A production-oriented Spring Boot REST API foundation for a public interview-preparation platform. The project is intentionally database-free in Phase 1 and is designed to evolve toward Google SSO, study progress, and premium-content authorization.
+A production-oriented Spring Boot API for learning paths, courses, questions, and content delivery in the Look Ahead Learning Platform. The current foundation is intentionally database-free and will evolve toward S3-backed public content and authorized premium-content delivery.
 
 ## Technology
 
@@ -37,7 +37,7 @@ Useful URLs:
 ./mvnw clean verify
 ```
 
-The packaged application is `target/java-interview-guide-api.jar`.
+The packaged application is `target/lookahead-content-api.jar`.
 
 ## API
 
@@ -53,7 +53,7 @@ Example response:
 ```json
 {
   "data": {
-    "application": "interview-guide-backend",
+    "application": "lookahead-content-api",
     "status": "UP",
     "version": "0.0.1-SNAPSHOT"
   },
@@ -76,13 +76,13 @@ Build the application before building the image:
 
 ```shell
 ./mvnw clean package
-docker build -t interview-guide-api:local .
-docker run --rm -p 8080:8080 interview-guide-api:local
+docker build -t lookahead-content-api:local .
+docker run --rm -p 8080:8080 lookahead-content-api:local
 ```
 
 ## Architecture and roadmap
 
-See [docs/architecture.md](docs/architecture.md) for current boundaries and the planned Cognito, PostgreSQL, Stripe, and AWS evolution.
+See [docs/architecture.md](docs/architecture.md) for the service boundary and planned S3, CloudFront, authorization, and AWS evolution.
 
 ## Continuous integration
 

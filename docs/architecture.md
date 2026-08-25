@@ -1,8 +1,8 @@
-# Backend architecture
+# Content API architecture
 
 ## Current scope
 
-The backend is a stateless Spring Boot REST API. Phase 1 deliberately contains no database, identity provider, payment provider, or interview-content repository.
+The Content API is a stateless Spring Boot REST API. Its bounded context is learning-path, course, question, and content delivery. The current foundation deliberately contains no database, identity provider, or payment provider.
 
 ```mermaid
 flowchart LR
@@ -27,18 +27,18 @@ Future domain logic will be separated into `service`, `model`, and `repository` 
 
 ```mermaid
 flowchart LR
-    Angular[Angular application] --> API[Spring Boot API]
-    API --> Cognito[Amazon Cognito]
-    API --> Postgres[(PostgreSQL)]
-    API --> Stripe[Stripe]
-    API --> CloudWatch[Amazon CloudWatch]
+    Angular[Look Ahead Learning Web] --> Gateway[AWS API Gateway]
+    Gateway --> ContentAPI[Look Ahead Content API]
+    ContentAPI --> S3[Amazon S3 content]
+    ContentAPI --> Cognito[Amazon Cognito authorization]
+    ContentAPI --> CloudWatch[Amazon CloudWatch]
 ```
 
-- Angular initially owns public interview content as version-controlled JSON.
-- Cognito will provide Google sign-in through OAuth 2.0/OpenID Connect.
-- PostgreSQL will hold profiles, bookmarks, progress, and entitlements.
-- Stripe will process payments; the application will not store card data.
-- Premium content will be returned only by authorized API endpoints.
+- Angular initially loads public learning content from version-controlled JSON.
+- Amazon S3 and CloudFront will deliver published public content.
+- Cognito tokens will identify users requesting protected content.
+- A separate User API will own profiles, bookmarks, progress, and entitlements in PostgreSQL.
+- Premium content will be returned only after server-side authorization.
 
 ## API conventions
 
