@@ -1,0 +1,3 @@
+logging:
+  level:
+    com.interview.guide.java.backend: DEBUG

@@ -1,0 +1,8 @@
+.git
+.github
+.idea
+*.iml
+*.log
+.DS_Store
+target/*.jar.original
+target/surefire-reports
