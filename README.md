@@ -1,89 +1,148 @@
 # Look Ahead Content API
 
-A production-oriented Spring Boot API for learning paths, courses, questions, and content delivery in the Look Ahead Learning Platform. The current foundation is intentionally database-free and will evolve toward S3-backed public content and authorized premium-content delivery.
+A Java 21 / Spring Boot API for account-owned study plans. It stores immutable plan
+versions in PostgreSQL, tracks progress and notes, rejects stale concurrent writes,
+and makes retries idempotent. Authentication uses sessions and CSRF protection;
+synthetic password login is available only in explicit local test mode.
 
-## Technology
+You can build, test and explore this repository without the frontend, a private
+content checkout, or AWS credentials. A small synthetic catalog is included.
 
-- Java 21
-- Spring Boot 4.1.1
-- Maven Wrapper
-- Spring Web MVC and Bean Validation
-- Spring Boot Actuator
-- Springdoc OpenAPI and Swagger UI
-- JUnit integration tests
-- Docker
-- GitHub Actions
+## Choose a runnable mode
 
-## Requirements
+| Mode | Requirements | What you can exercise |
+| --- | --- | --- |
+| Operational foundation | Java 21+ | Status, readiness/liveness and OpenAPI; account endpoints are disabled |
+| Local account demo | Java 21+, PostgreSQL 17+, Python 3.10+ | Login, account isolation, plan/version persistence, notes, recovery and revision/idempotency checks using synthetic data |
 
-- Java 21+
-- Docker (optional)
+The first mode demonstrates service operation. Use the account demo to evaluate
+the persistence and authentication implementation.
 
-## Run locally
+## Quick start: operational foundation
 
-```shell
-./mvnw spring-boot:run
+The Maven Wrapper is included; no global Maven installation is needed. Initial
+builds download Maven and dependencies.
+
+```sh
+./mvnw --batch-mode --no-transfer-progress clean verify
+java -jar target/lookahead-content-api.jar \
+  --server.address=127.0.0.1 --server.port=8081
 ```
 
-Useful URLs:
+Choose a free port if 8081 is occupied. In another terminal:
 
-- API status: http://localhost:8080/api/v1/status
-- Health: http://localhost:8080/actuator/health
-- Swagger UI: http://localhost:8080/swagger-ui.html
+```sh
+curl --fail http://127.0.0.1:8081/api/v1/status
+curl --fail http://127.0.0.1:8081/actuator/health/readiness
+```
+
+Open [Swagger UI](http://127.0.0.1:8081/swagger-ui.html) to inspect the API. Stop the
+foreground process with Ctrl+C. To develop without rebuilding the JAR each time:
+
+```sh
+./mvnw spring-boot:run \
+  -Dspring-boot.run.arguments="--server.address=127.0.0.1 --server.port=8081"
+```
+
+## Full local account demo
+
+Follow the [standalone account walkthrough](docs/standalone-accounts.md). It uses
+an externally provisioned local PostgreSQL database, API-owned role/schema SQL,
+a generated local secret directory and the included synthetic catalog. No
+frontend or other repository is required.
+
+The walkthrough covers fresh database setup, migration, local seed configuration,
+startup and the HTTP verification suite. Runtime and migration roles are separate;
+normal startup does not reset users, grants or stored plans.
+
+## Implementation highlights
+
+- Controllers, DTOs, services, repositories, validators, filters and exception
+  handlers have separate packages and responsibilities.
+- Database writes enforce account ownership, expected revisions and transactional
+  idempotency receipts. Snapshots retain their original version metadata.
+- Session completion and canonical content completion are distinct. Notes and
+  explicit recovery versions remain attached to the owning account and plan.
+- A backend-controlled metadata catalog validates content references and routes;
+  caller-provided topic lists cannot grant access.
+- Database outages affect readiness while process liveness stays independent.
+
+See the [architecture](docs/architecture.md), [HTTP contract](docs/account-api.md)
+and [Local / DEV / PROD environment guide](docs/environments.md).
 
 ## Test and package
 
-```shell
-./mvnw clean verify
+```sh
+./mvnw --batch-mode --no-transfer-progress clean verify
+python3 -m unittest discover -s tools/accounts -p 'test_*.py'
 ```
 
-The packaged application is `target/lookahead-content-api.jar`.
+Maven tests use synthetic fixtures and do not need a PostgreSQL service. The
+separate HTTP suite in the account walkthrough requires a running local account
+API and database. It creates and cleans up its own test plans; it does not certify
+a frontend scheduler or production identity provider.
 
-## API
+## Build and inspect the container
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/v1/status` | Application status and version |
-| `GET` | `/actuator/health` | Operational health |
-| `GET` | `/v3/api-docs` | OpenAPI JSON |
-| `GET` | `/swagger-ui.html` | Interactive API documentation |
+Docker is optional for host development. Build a dedicated demo tag to avoid
+replacing another application's local image:
 
-Example response:
-
-```json
-{
-  "data": {
-    "application": "lookahead-content-api",
-    "status": "UP",
-    "version": "0.0.1-SNAPSHOT"
-  },
-  "timestamp": "2026-08-25T12:00:00Z"
-}
+```sh
+docker build --tag lookahead-content-api:demo .
+sh tools/container/smoke.sh lookahead-content-api:demo
+docker run --rm --name lookahead-api-demo \
+  -p 127.0.0.1:8081:8080 \
+  lookahead-content-api:demo
 ```
 
-## Configuration
+The image defaults to the database-free `prod` operational profile. The smoke
+helper creates a throwaway container with no published port, checks non-root
+readiness, then removes only that container. The production runtime runs as UID
+10001; build tools and tests remain in the build stage.
 
-| Environment variable | Default | Purpose |
-| --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | `local` | Selects `local`, `test`, or `prod` configuration |
-| `FRONTEND_ORIGIN` | `http://localhost:4200` | Allowed Angular origin for API CORS |
+Docker receives only the source, Maven inputs and health probe needed by the
+build. Local environment files, keys, private notes and runtime state are excluded.
+Base-image tags can change upstream; release processes should pin reviewed digests.
 
-No secrets are required in Phase 1.
+## Environment boundaries
 
-## Docker
+`local-accounts` enables the local demo; `dev` and `production` reserve distinct
+shared environments. DEV and PROD disable synthetic password login. Production
+identity, shared sessions, deployment infrastructure and target-environment
+verification are still required before a production account service can launch.
 
-Build the application before building the image:
-
-```shell
-./mvnw clean package
-docker build -t lookahead-content-api:local .
-docker run --rm -p 8080:8080 lookahead-content-api:local
-```
-
-## Architecture and roadmap
-
-See [docs/architecture.md](docs/architecture.md) for the service boundary and planned S3, CloudFront, authorization, and AWS evolution.
+Platform-wide infrastructure orchestration lives separately from this API. The
+standalone walkthrough needs only PostgreSQL's documented local service contract.
+Actual credentials belong in ignored local files or a deployment secret provider.
+Use explicit safe example files when adding configuration; never commit runtime
+secrets or proprietary catalogs.
 
 ## Continuous integration
 
-Every push and pull request to `main` runs the Maven test suite, creates the executable JAR, and validates the Docker image build.
+The included workflow verifies the JAR and configuration helper tests, builds the
+image, and runs the non-root readiness smoke check.
+
+### Cucumber acceptance tests
+
+Run `./mvnw -Dtest=CucumberAtddTest test` for Java component features using mocked storage, without Docker. See [Cucumber tests](docs/cucumber-tests.md) for feature locations, Java steps, optional live discovery, and coverage boundaries.
+
+Email registration is opt-in and uses required profile data with explicit country selection. The local infrastructure stack enables it. See [email account registration](docs/account-registration.md) for routes, availability, migration, and session behavior. Google OIDC remains a separate pending integration.
+
+First-party OAuth and a confidential browser gateway are available through the
+`oauth-server` and `gateway` profiles. See [OAuth and gateway contracts](docs/oauth-gateway.md)
+for exact routes, token validation, secret configuration and operational limits.
+
+## Optional local author capability
+
+When the integrated account stack enables `app.local-test.author-enabled=true`,
+the reserved `author@lookahead.test` synthetic account receives all current
+trusted-catalog topic grants and an `authorPreview` capability in its account
+response. It uses the configured local seed secret; no password is hardcoded.
+The existing local seeding guard requires `accounts,local-test`, deployment
+`local`, and explicit seeding, and rejects production combinations. A conflicting
+username cannot promote an existing account. Restarts preserve the author's
+password and plans while adding new published scopes. Content authorization and
+account-owned plan isolation use the normal repositories and policies.
+
+This capability supports the web author workspace; it does not provide
+cross-account administration or production author identity management.

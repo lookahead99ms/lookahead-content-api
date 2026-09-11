@@ -1,0 +1,6 @@
+app:
+  oauth:
+    issuer: ${LOOKAHEAD_OAUTH_ISSUER}
+    frontend: ${LOOKAHEAD_FRONTEND_ORIGIN}
+    signing-private-key: ${LOOKAHEAD_SIGNING_PRIVATE_KEY:/run/secrets/oauth-signing-private.pem}
+    signing-public-key: ${LOOKAHEAD_SIGNING_PUBLIC_KEY:/run/secrets/oauth-signing-public.pem}

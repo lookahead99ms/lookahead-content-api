@@ -33,5 +33,11 @@ jobs:
       - name: Verify with Maven Wrapper
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
 
+      - name: Verify standalone configuration helper
+        run: python3 -m unittest discover -s tools/accounts -p 'test_*.py'
+
       - name: Build Docker image
         run: docker build --tag lookahead-content-api:${{ github.sha }} .
+
+      - name: Verify non-root container readiness
+        run: sh tools/container/smoke.sh lookahead-content-api:${{ github.sha }}

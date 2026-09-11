@@ -3,6 +3,16 @@ spring:
     name: lookahead-content-api
   profiles:
     default: local
+    group:
+      local-accounts:
+        - local
+        - accounts
+        - local-test
+      dev:
+        - accounts
+      production:
+        - prod
+        - accounts
 
 app:
   version: "@project.version@"
