@@ -1,0 +1,36 @@
+spring:
+  config:
+    import: configtree:${LOOKAHEAD_SECRETS_DIRECTORY:/run/secrets/}
+  mail:
+    properties:
+      mail.smtp.connectiontimeout: 3000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      connection-timeout: 3000
+      validation-timeout: 2000
+server:
+  shutdown: graceful
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        name: LOOKAHEAD_SESSION
+        http-only: true
+        same-site: lax
+        secure: true
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,accountDatabase
+
+# A mail sender is created only when spring.mail.host is explicitly configured.
+# Keep credentials in the environment's config tree.
+
+app:
+  accounts:
+    registration-enabled: ${LOOKAHEAD_REGISTRATION_ENABLED:false}

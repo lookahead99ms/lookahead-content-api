@@ -1,0 +1,4 @@
+app:
+  deployment-environment: development
+  local-test:
+    seed-enabled: false

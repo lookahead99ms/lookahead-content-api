@@ -1,0 +1,11 @@
+# Protected content publication
+
+The account-enabled API serves only paths listed in a server-owned `content-publication/v1` manifest. Configure both `APP_CONTENT_PUBLICATION_PATH` and `APP_CONTENT_ROOT`, or leave both unset to disable the route. The root is a read-only runtime mount, never a source checkout or a distributable image layer. Publication entries declare path, SHA-256, MIME type, public/free/Pro tier, course scopes and canonical content IDs. No legacy whole-course or module answer bundles belong in a publication.
+
+Public bodies require no session. Free bodies require a currently enabled account. Pro bodies additionally require a current grant for an allowed course scope. `account_grants.valid_until` is optional; elapsed grants no longer authorize reads. The API checks current grants on each request, verifies the requested bytes against their digest, and returns `Cache-Control: no-store, private` on success. Unknown assets are404, missing sign-in is401, and missing course access is403. Symlinks, changed files and unsafe paths never become a filesystem fallback.
+
+Metadata may remain public for discovery. Account responses include record-level `contentGrants` for the selected free sample and required course dependencies. These do not grant an entire second course. Saved plan validation uses trusted canonical IDs and current access; a caller cannot add a grant to a snapshot. Supporting media and answer slides use the same delivery boundary. Already downloaded information cannot be recalled from a learner's device.
+
+The frontend's `build:protected` excludes static content and private previews, proxies `/content/**` to the authorizing API, avoids protected body caches, and discards responses if account identity changes while loading. Catalog/module lists use safe locator summaries. The independent public demo continues to use redistributable samples and does not need this API.
+
+Publication authoring, sample selection and private curriculum remain outside this public API repository. Local tests cover public/free/Pro, course mismatch/revocation, changed bytes and unsafe paths. AWS identity, TLS, IAM and CDN behavior require separate environment verification.
