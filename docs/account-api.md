@@ -89,6 +89,29 @@ authenticate or grant access. It is optional for direct API clients.
 
 Plan views contain `planId`, `versionId`, `revision`, `goal`, `snapshot`,
 `provenance`, `progress`, `recovery`, `restrictedContentIds`, `createdAt`, `updatedAt`.
+
+List rows retain their existing identity/revision/time fields and add a `card`
+object (`schemaVersion: "plan-card/v1"`). It reports `selectedTopicIds`,
+`durationDays`, `configuredDailyMinutes`, `completedSessionCount`,
+`totalSessionCount`, and `nextScheduledActivity`. Completion counts only distinct
+session IDs in the current saved schedule that are explicitly completed; older
+versions, daily recalls outside that schedule and canonical completion do not
+inflate this count. `nextScheduledActivity` is the first incomplete item in saved
+schedule order, with `assignmentId`, `sourceContentId`, `title`, `kind`, `minutes`,
+`route` and relative `studyDay`. It is not a date-aware or prerequisite-ready
+recommendation.
+
+Card reads do not select, activate or write a plan. Pagination continues to return
+all owned saved plans, including accounts with more than four historical plans.
+The page and its current versions use one repeatable-read transaction. Versions
+are loaded only for returned rows, not the extra pagination sentinel.
+`metadataStatus: "unavailable"` and null values disclose missing legacy metadata.
+`configuredDailyMinutes` is the saved `dailyHours` converted to minutes, not an
+enforced reservation. `lifecycleState` and `reservation` remain null until their
+explicit dated lifecycle contract is available; neither is inferred from creation
+timestamps or completion percentages. The standalone `PlanReservationPolicy`
+validator is not yet wired into writes and does not advertise enforced account
+limits or an eligibility endpoint.
 Progress contains `completedContentIds`, `completedSessionIds`,
 `attemptedContentIds`, `needsReviewContentIds`, `notes`, `sessionOutcomes`, and
 optional raw `legacySource`. Imported summaries retain their historical uncertainty;

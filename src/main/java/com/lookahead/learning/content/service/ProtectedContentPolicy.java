@@ -14,7 +14,11 @@ import java.util.*;
 @Component
 @Profile("accounts")
 public class ProtectedContentPolicy {
-    public record Asset(String path,String sha256,String mediaType,String tier,Set<String> scopes,Set<String> contentIds) {}
+    public record Asset(String path,String sha256,String mediaType,String tier,Set<String> scopes,Set<String> contentIds,String scopeMatch) {
+        public boolean matchesScopes(Set<String> courseGrants) {
+            return scopeMatch.equals("all") ? courseGrants.containsAll(scopes) : scopes.stream().anyMatch(courseGrants::contains);
+        }
+    }
     private final Map<String,Asset> assets;
     private final Path root;
     private final String version;
@@ -34,8 +38,14 @@ public class ProtectedContentPolicy {
                 String path=item.path("path").asText(),sha=item.path("sha256").asText(),type=item.path("mediaType").asText(),tier=item.path("tier").asText();
                 if(!validPath(path) || !sha.matches("[a-f0-9]{64}") || !Set.of("public","free","pro").contains(tier) || !Set.of("application/json","text/html","text/css","text/javascript","image/svg+xml","image/png","image/jpeg","image/webp","font/woff2").contains(type))throw new IllegalArgumentException("Invalid asset entry");
                 Set<String> scopes=strings(item.path("scopes")),ids=strings(item.path("contentIds"));
+                String scopeMatch="any";
+                if(item.has("scopeMatch")) {
+                    if(!item.path("scopeMatch").isString() || !Set.of("any","all").contains(item.path("scopeMatch").asText()))throw new IllegalArgumentException("Invalid scope matching rule");
+                    scopeMatch=item.path("scopeMatch").asText();
+                }
                 if(scopes.stream().anyMatch(scope->!scope.matches("(?:learn|grow|look-ahead):[a-z0-9-]+")) || (tier.equals("pro") && scopes.isEmpty()))throw new IllegalArgumentException("Invalid course scope");
-                if(entries.putIfAbsent(path,new Asset(path,sha,type,tier,scopes,ids))!=null)throw new IllegalArgumentException("Duplicate asset path");
+                if(path.startsWith("/content/study-plans/") && !ids.isEmpty())throw new IllegalArgumentException("Study plan assets cannot grant curriculum access");
+                if(entries.putIfAbsent(path,new Asset(path,sha,type,tier,scopes,ids,scopeMatch))!=null)throw new IllegalArgumentException("Duplicate asset path");
                 if(!tier.equals("pro"))free.addAll(ids);
             }
             assets=Map.copyOf(entries);freeContentIds=Set.copyOf(free);
@@ -50,7 +60,7 @@ public class ProtectedContentPolicy {
     public Set<String> freeContentIds(){return freeContentIds;}
     public Set<String> contentGrants(Set<String> courseGrants) {
         var result=new HashSet<>(freeContentIds);
-        for(var asset:assets.values()) if(asset.scopes().stream().anyMatch(courseGrants::contains)) result.addAll(asset.contentIds());
+        for(var asset:assets.values()) if(asset.matchesScopes(courseGrants)) result.addAll(asset.contentIds());
         return Set.copyOf(result);
     }
     public Optional<Asset> find(String path){return Optional.ofNullable(assets.get(path));}

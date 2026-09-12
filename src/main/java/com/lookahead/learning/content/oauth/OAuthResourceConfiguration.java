@@ -24,7 +24,7 @@ import java.util.UUID;
 public class OAuthResourceConfiguration {
     @Bean @Order(2) SecurityFilterChain oauthResources(HttpSecurity http, JwtDecoder decoder,
             OAuthSettings settings, AccountRepository accounts, OAuth2AuthorizationService authorizations) throws Exception {
-        http.securityMatcher("/api/v1/plans", "/api/v1/plans/**", "/api/v1/auth/me", "/api/v1/account-catalog", "/api/v1/support", "/content/**")
+        http.securityMatcher("/api/v1/executions/capabilities", "/api/v1/executions/jobs", "/api/v1/executions/jobs/*", "/api/v1/plans", "/api/v1/plans/**", "/api/v1/auth/me", "/api/v1/account-catalog", "/api/v1/support", "/content/**")
                 .cors(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth->auth

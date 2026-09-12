@@ -6,21 +6,25 @@ import java.net.URI;
 /** Deployment-owned endpoints; request headers and browser parameters never select an issuer or upstream. */
 public record OAuthSettings(String issuer, String clientId, String clientSecret, String upstream, String frontend) {
     public static OAuthSettings from(Environment environment) {
-        String issuer = required(environment, "app.oauth.issuer");
-        String frontend = required(environment, "app.oauth.frontend");
-        String secret = required(environment, "app.oauth.client-secret");
+        var properties = org.springframework.boot.context.properties.bind.Binder.get(environment)
+                .bind("app.oauth", OAuthProperties.class).orElseThrow(() -> new IllegalStateException("app.oauth is required"));
+        return from(properties, "local".equals(environment.getProperty("app.deployment-environment")));
+    }
+
+    static OAuthSettings from(OAuthProperties properties, boolean local) {
+        String issuer = required(properties.issuer(), "app.oauth.issuer");
+        String frontend = required(properties.frontend(), "app.oauth.frontend");
+        String secret = required(properties.clientSecret(), "app.oauth.client-secret");
         if (secret.length() < 32) throw new IllegalStateException("OAuth client secret must contain at least 32 characters");
-        boolean local = "local".equals(environment.getProperty("app.deployment-environment"));
         validatePublicUrl(issuer, local); validatePublicUrl(frontend, local);
         if (!issuer.equals(frontend)) throw new IllegalStateException("This first-party deployment uses one configured frontend/issuer origin");
-        String upstream = environment.getProperty("app.oauth.upstream", "http://content-api:8080");
+        String upstream = properties.upstream();
         URI uri = URI.create(upstream);
         if (uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null || !uri.getPath().isEmpty())
             throw new IllegalStateException("OAuth upstream must be an explicit service origin");
         return new OAuthSettings(issuer, "lookahead-web-gateway", secret, upstream, frontend);
     }
-    private static String required(Environment environment, String name) {
-        String value=environment.getProperty(name);
+    private static String required(String value, String name) {
         if(value==null || value.isBlank()) throw new IllegalStateException(name+" is required");
         return value;
     }
