@@ -14,7 +14,7 @@ public class ProtectedContentService {
         var asset=policy.find(path).orElseThrow(()->new AccountFailure(404,"CONTENT_NOT_FOUND","Content not found"));
         if(!asset.tier().equals("public")) {
             if(principal==null || !accounts.isEnabled(principal.accountId()))throw new AccountFailure(401,"AUTHENTICATION_REQUIRED","Sign in to read this content");
-            if(asset.tier().equals("pro") && accounts.findTopicGrants(principal.accountId()).stream().noneMatch(asset.scopes()::contains))throw new AccountFailure(403,"CONTENT_SCOPE_REQUIRED","This content requires Pro access for its course");
+            if(asset.tier().equals("pro") && !asset.matchesScopes(accounts.findTopicGrants(principal.accountId())))throw new AccountFailure(403,"CONTENT_SCOPE_REQUIRED","This content requires Pro access for its course");
         }
         return new Content(policy.read(asset),asset.mediaType(),policy.version());
     }

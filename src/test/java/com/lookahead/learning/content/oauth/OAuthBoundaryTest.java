@@ -48,7 +48,7 @@ class OAuthBoundaryTest {
         var generator=KeyPairGenerator.getInstance("RSA");generator.initialize(3072);var pair=generator.generateKeyPair();
         var key=new RSAKey.Builder((RSAPublicKey)pair.getPublic()).privateKey((RSAPrivateKey)pair.getPrivate()).keyID("synthetic-key").build();
         JWKSource<SecurityContext> source=(selector,context)->selector.select(new JWKSet(key));
-        var decoder=new OAuthServerConfiguration().authorizationJwtDecoder(source,settings());var encoder=new NimbusJwtEncoder(source);
+        var decoder=new OAuthKeyConfiguration().authorizationJwtDecoder(source,settings());var encoder=new NimbusJwtEncoder(source);
         for(var value:List.of(new String[]{settings().issuer(),"-120"},new String[]{"https://other-issuer.example","300"})) {
             var claims=JwtClaimsSet.builder().issuer(value[0]).subject(UUID.randomUUID().toString()).issuedAt(Instant.now().minusSeconds(600))
                     .expiresAt(Instant.now().plusSeconds(Integer.parseInt(value[1]))).build();

@@ -88,6 +88,36 @@ public final class SnapshotValidator {
         return record != null && (grants.contains("content:"+record.path("id").asText()) || strings(record, "topicIds", 100).stream().anyMatch(grants::contains));
     }
 
+    /** Validates an already hash-verified authored source; this never enables client snapshot writes. */
+    public Map<String, String> validateTemplateReferences(JsonNode template) {
+        JsonNode pins = template.path("provenance");
+        require("ready-made-schedule/v1".equals(text(pins, "algorithmVersion", 256)), "Unsupported template algorithm");
+        require(catalogVersion().equals(text(pins, "catalogVersion", 256)), "Unresolvable template catalog version");
+        String ranking = optionalText(pins, "rankingVersion", 256);
+        require(ranking == null || strings(catalog, "rankingVersions", 100).contains(ranking), "Unresolvable template ranking version");
+        Set<String> selected = new HashSet<>(strings(template, "topicIds", 100));
+        require(!selected.isEmpty() && topicIds.containsAll(selected), "Unknown template topic");
+        Map<String, String> canonical = new LinkedHashMap<>();
+        Set<String> actualTopics = new HashSet<>();
+        for (JsonNode reference : array(template, "references", 10000)) {
+            String id = text(reference, "contentId", 256), topic = text(reference, "topicId", 256);
+            JsonNode record = records.get(id);
+            require(record != null && id.equals(record.path("id").asText()), "Template requires canonical published content IDs");
+            require(selected.contains(topic) && strings(record, "topicIds", 100).contains(topic), "Template topic disagrees with catalog");
+            require(reference.path("route").equals(record.path("route")), "Template route disagrees with catalog");
+            require(reference.path("contentType").equals(record.path("contentType")), "Template content type disagrees with catalog");
+            require(!reference.path("contentType").asText().equals("dsa-problem") || ranking != null, "Template DSA references require ranking pin");
+            for (String dependency : strings(reference, "prerequisiteIds", 100))
+                require(records.containsKey(dependency), "Unknown template prerequisite");
+            require(canonical.putIfAbsent(id, id) == null, "Duplicate template reference");
+            actualTopics.add(topic);
+        }
+        require(actualTopics.equals(selected), "Template selection must exactly cover its reference topics");
+        for (String id : strings(template, "assumedPrerequisiteIds", 10000))
+            require(records.containsKey(id), "Unknown assumed template prerequisite");
+        return Map.copyOf(canonical);
+    }
+
     private ValidationResult validateSnapshot(JsonNode snapshot, JsonNode provenance, boolean legacyImport,
                                               Set<String> grants, boolean existingVersion) {
         fields(snapshot, "config focusedDailyHours bufferHours includedTopics excludedTopics days weeks uniqueNewItems reviewAssignments schedulingVersion eligibleNewItems remainingNewItems blockedItems futureReviews overdueReviewCount mode topicCoverage");

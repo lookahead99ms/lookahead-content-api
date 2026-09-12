@@ -66,9 +66,11 @@ public class GatewayController {
         boolean content=upstreamPath.startsWith("/content/") && request.getMethod().equals("GET");
         boolean account=upstreamPath.equals("/api/v1/auth/me") || upstreamPath.equals("/api/v1/account-catalog")
                 || upstreamPath.equals("/api/v1/support") || upstreamPath.equals("/api/v1/plans") || upstreamPath.startsWith("/api/v1/plans/");
-        if(!content && !account)return ResponseEntity.notFound().build();
-        byte[] body=request.getInputStream().readNBytes(8*1024*1024+1);
-        if(body.length>8*1024*1024)return ResponseEntity.status(413).build();
+        boolean execution = executionRoute(request.getMethod(), upstreamPath) && request.getQueryString() == null;
+        if(!content && !account && !execution)return ResponseEntity.notFound().build();
+        int bodyLimit = execution ? 512 * 1024 : 8 * 1024 * 1024;
+        byte[] body=request.getInputStream().readNBytes(bodyLimit + 1);
+        if(body.length>bodyLimit)return ResponseEntity.status(413).build();
         String target=settings.upstream()+upstreamPath+(request.getQueryString()==null?"":"?"+request.getQueryString());
         var outgoing=http.method(HttpMethod.valueOf(request.getMethod())).uri(target).headers(headers->{
             for(String name:List.of("Content-Type","Accept","Idempotency-Key","If-Match","X-LookAhead-Account")) {
@@ -83,12 +85,19 @@ public class GatewayController {
         }
         // No browser Authorization, Cookie, Origin, forwarding headers, or arbitrary upstream is relayed.
         return outgoing.body(body).exchange((sent,received)->{
-            byte[] bytes=received.getBody().readNBytes(16*1024*1024+1);
-            if(bytes.length>16*1024*1024)return ResponseEntity.status(502).body(new byte[0]);
+            int responseLimit = execution ? 512 * 1024 : 16 * 1024 * 1024;
+            byte[] bytes=received.getBody().readNBytes(responseLimit + 1);
+            if(bytes.length>responseLimit)return ResponseEntity.status(502).body(new byte[0]);
             var headers=new HttpHeaders();headers.setCacheControl("no-store");
             if(received.getHeaders().getContentType()!=null)headers.setContentType(received.getHeaders().getContentType());
             headers.set("X-Content-Type-Options","nosniff");
             return new ResponseEntity<>(bytes,headers,received.getStatusCode());
         });
+    }
+    static boolean executionRoute(String method, String path) {
+        return "GET".equals(method) && "/api/v1/executions/capabilities".equals(path)
+                || "POST".equals(method) && "/api/v1/executions/jobs".equals(path)
+                || ("GET".equals(method) || "DELETE".equals(method))
+                && path.matches("/api/v1/executions/jobs/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
     }
 }

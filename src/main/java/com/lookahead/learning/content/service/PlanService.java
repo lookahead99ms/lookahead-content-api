@@ -7,6 +7,7 @@ import com.lookahead.learning.content.model.PlanRecord;
 import com.lookahead.learning.content.model.PlanVersion;
 import com.lookahead.learning.content.model.MutationReceipt;
 import com.lookahead.learning.content.util.PlanJson;
+import com.lookahead.learning.content.util.PlanCardMetadata;
 import com.lookahead.learning.content.util.StudyActivity;
 import static com.lookahead.learning.content.util.PayloadReaders.*;
 import org.springframework.context.annotation.Profile;
@@ -43,7 +44,7 @@ public class PlanService {
         return view(account, plan, version);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public JsonNode list(UUID account, int limit, String after) {
         require(limit > 0 && limit <= 100, "limit must be between 1 and 100");
         // An offset cursor is scoped by the owner on every query; it contains no private record ID.
@@ -53,15 +54,19 @@ public class PlanService {
             catch (Exception ex) { throw new IllegalArgumentException("Invalid plan cursor"); }
             require(offset >= 0 && offset <= 100000, "Invalid plan cursor");
         }
-        var rows = repository.list(account, limit + 1, offset).stream().map(plan -> {
+        var page = repository.list(account, limit + 1, offset);
+        var rows = page.stream().limit(limit).map(plan -> {
             ObjectNode node = mapper.createObjectNode();
             node.put("planId", plan.id().toString()); node.put("versionId", plan.version().toString());
             node.put("revision", plan.revision()); node.put("goal", plan.goal());
-            node.put("createdAt", plan.createdAt()); node.put("updatedAt", plan.updatedAt()); return node;
+            node.put("createdAt", plan.createdAt()); node.put("updatedAt", plan.updatedAt());
+            PlanVersion current = version(account, plan.id(), plan.version());
+            node.set("card", PlanCardMetadata.from(current.snapshot(), plan.progress(), mapper));
+            return node;
         }).toList();
         ObjectNode result = mapper.createObjectNode();
-        result.set("plans", mapper.valueToTree(rows.subList(0, Math.min(limit, rows.size()))));
-        if (rows.size() > limit) result.put("nextCursor", Base64.getUrlEncoder().withoutPadding()
+        result.set("plans", mapper.valueToTree(rows));
+        if (page.size() > limit) result.put("nextCursor", Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(Integer.toString(offset + limit).getBytes(StandardCharsets.UTF_8)));
         else result.putNull("nextCursor");
         return result;
