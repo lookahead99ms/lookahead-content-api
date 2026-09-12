@@ -8,6 +8,75 @@ synthetic password login is available only in explicit local test mode.
 You can build, test and explore this repository without the frontend, a private
 content checkout, or AWS credentials. A small synthetic catalog is included.
 
+## Platform highlights
+
+Look Ahead combines Learn foundations, Grow production practice, and Look Ahead
+architecture and leadership preparation with unified Search, guided practice,
+730 ranked canonical DSA problems, and adaptive Study Plans. This service owns
+the account and protected-content boundary behind those experiences. The full
+curriculum and 450 ready-made Study Plan templates remain in the private content
+repository; this public API repository contains only redistributable contracts
+and synthetic fixtures.
+
+## Architecture and repository relationships
+
+```mermaid
+flowchart LR
+  Browser[Browser] --> Web[Angular web]
+  Web --> Gateway[OAuth gateway]
+  Gateway --> API["Content API<br/>this repository"]
+  Web --> API
+  API --> DB[(PostgreSQL)]
+  Publication["Protected immutable publication"] --> API
+  Content[Private content repository] -->|builds and validates| Publication
+  Infra[Infrastructure repository] -->|configuration and lifecycle| Gateway
+  Infra -->|configuration and lifecycle| API
+  Infra -->|provisions locally| DB
+```
+
+| Repository | Relationship to this service |
+| --- | --- |
+| **`lookahead-learning-web-public`** | Consumes the HTTP contracts; it can also run without this API using synthetic browser-local data. |
+| **`lookahead-learning-api`** | Owns application code, SQL migrations, account authorization, protected reads, plan versions, progress, recovery and API-level idempotency. |
+| **`lookahead-learning-infra`** | Supplies local PostgreSQL, service configuration, OAuth gateway, mail capture, lifecycle and recovery orchestration. It does not own application migrations. |
+| **`lookahead-learning-content`** | Privately authors and validates curriculum and immutable publication fragments. It never supplies account or runtime secrets. |
+
+## Main service flows
+
+Account writes use an owner-scoped revision and idempotency boundary:
+
+```mermaid
+sequenceDiagram
+  participant W as Web UI
+  participant A as API
+  participant Z as Authorization policy
+  participant P as PostgreSQL
+  W->>A: Save plan with expected revision and idempotency key
+  A->>Z: Validate owner, access, scope, capacity and plan policy
+  Z-->>A: Allow or explain exact rejection
+  A->>P: Commit plan version and receipt atomically
+  P-->>A: New server revision
+  A-->>W: Saved snapshot or explicit conflict
+```
+
+Protected content remains separate from saved plan references:
+
+```mermaid
+sequenceDiagram
+  participant W as Web UI
+  participant A as API
+  participant C as Immutable publication
+  W->>A: Request protected asset
+  A->>A: Recheck current account grants
+  A->>C: Resolve hash-pinned asset
+  C-->>A: Published bytes
+  A-->>W: Authorized content or bounded access error
+```
+
+Saving a plan never grants permanent access to paid content. Expired access keeps
+the plan and progress intact while protected reads continue to enforce current
+entitlements.
+
 ## Choose a runnable mode
 
 | Mode | Requirements | What you can exercise |
@@ -17,6 +86,24 @@ content checkout, or AWS credentials. A small synthetic catalog is included.
 
 The first mode demonstrates service operation. Use the account demo to evaluate
 the persistence and authentication implementation.
+
+## Run locally with the whole platform
+
+For the integrated development stack, keep this checkout beside
+`lookahead-learning-infra` and `lookahead-learning-web-public`. The infrastructure
+repository builds and runs this service as `lookahead-local-api` on loopback port
+`4320`, connects it to its private PostgreSQL network, and runs the OAuth gateway
+on `4330`. The UI runs separately on `4316`.
+
+From the infrastructure repository, follow `docs/local-accounts.md`, then
+`docs/oauth-local.md`. From the web repository run:
+
+```shell
+npm run start:connected -- --host 127.0.0.1 --port 4316
+```
+
+The integrated stack is a local development environment. It does not claim AWS
+identity, networking, TLS, managed failover, or production performance.
 
 ## Quick start: operational foundation
 
